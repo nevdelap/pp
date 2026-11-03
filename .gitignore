@@ -10,6 +10,10 @@
 /data-smoke2/
 /data-smoke3/
 /target/
+__pycache__/
+*.py[cod]
+/.runtime/
 
 jj-build-path-check/
-/data-bigint/
+/data-bigint/*
+!/data-bigint/final-report.md

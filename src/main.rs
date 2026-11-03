@@ -280,12 +280,12 @@ fn verify_record(line: &str) -> Option<&'static str> {
                 .strip_prefix("factor=")
                 .and_then(|x| x.parse::<u128>().ok())
             {
-                factor > 1 && n % factor == 0
+                factor > 1 && factor < n && n % factor == 0
             } else if let Some(base) = ev
                 .strip_prefix("miller_rabin_base=")
                 .and_then(|x| x.parse::<u128>().ok())
             {
-                !mr(n, base)
+                base >= 2 && base < n - 1 && !mr(n, base)
             } else {
                 false
             };
@@ -942,5 +942,21 @@ mod primality_tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn composite_evidence_requires_proper_factor_or_valid_mr_base() {
+        let row = |evidence: &str| {
+            format!(
+                "{{\"value\":\"9\",\"binary\":\"1001\",\"hex\":\"9\",\"decimal_digits\":1,\"binary_bits\":4,\"hex_digits\":1,\"classification\":\"composite\",\"proof_evidence\":\"{evidence}\"}}"
+            )
+        };
+        assert_eq!(verify_record(&row("factor=9")), None);
+        assert_eq!(verify_record(&row("miller_rabin_base=9")), None);
+        assert_eq!(verify_record(&row("factor=3")), Some("composite"));
+        assert_eq!(
+            verify_record(&row("miller_rabin_base=2")),
+            Some("composite")
+        );
     }
 }
