@@ -194,16 +194,16 @@ class CoordinatorValidationTests(unittest.TestCase):
                 "active_worker_count": 16, "active_batch_start": "4000000000",
                 "active_batch_end": "5600000000", "active_batch_assignments": "1600000000",
                 "active_batch_started_utc": "2026-11-03T10:00:00Z",
-                "active_batch_elapsed_seconds": 10, "interrupted_batch_seconds": 2,
+                "active_batch_elapsed_seconds": 10,
             }
             saved_events = []
             instance.save = saved_events.append
-            instance.save_stopped_batch(time.monotonic() - 5)
+            instance.save_stopped_batch()
             self.assertEqual(instance.state["status"], "stopped")
             self.assertEqual(instance.state["next_start"], "4000000000")
             self.assertEqual(instance.state["active_worker_count"], 0)
             self.assertNotIn("active_batch_start", instance.state)
-            self.assertGreaterEqual(instance.state["interrupted_batch_seconds"], 7)
+            self.assertNotIn("interrupted_batch_seconds", instance.state)
             self.assertEqual(saved_events, ["stop_requested_during_batch"])
 
     def test_unresolved_candidates_are_persisted_and_listed_in_markdown(self):

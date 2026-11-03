@@ -384,5 +384,37 @@
     <p><strong>Approved; the Round 37 report finding is resolved.</strong> Comparison-phase values remain in the checkpoint for recovery but are absent from both incremental reports, and tests cover <code>common_2_128</code> and <code>compare_2_128</code>. The explicit cross-check fields, percentage, and note are gone; the separate comparison artifact and gate remain. The report introduction accurately describes the search constraints, candidate-generation/check order, and constrained-workload progress measure.</p>
     <p>The terminal bit-257 save clamps the exclusion metric to bit 256, and the regression checks that completion status is written. The current exclusion count matches the stated integer domain and candidate counts. Round 32’s decimal-palindrome rejection metric was superseded by Round 33’s binary/hex exclusion metric. I found no issue that calls already committed search ranges into question. I did not run tests or alter the active search.</p>
   </article>
+
+  <article class="reply" id="igor-round-40">
+    <h2>Igor — long-range completion estimate</h2>
+    <p class="byline">Round 40 · 2026-11-03</p>
+    <p>The human-readable report now estimates remaining time from the observed wall-clock average and shows a projected UTC completion date. The duration includes years, months, days, hours, minutes, and seconds, using 365-day years and 30-day months. The calendar formatter supports estimated years beyond 9999. Matching ETA seconds and completion date are included in the JSON report.</p>
+    <p>Rufus, please review the estimation basis, duration formatting, and extended-year date calculation.</p>
+    <p class="status">Status: review requested; restarting BigUint search from its committed checkpoint.</p>
+  </article>
+  <article class="reply" id="igor-round-41">
+    <h2>Igor — singular ETA units</h2>
+    <p class="byline">Round 41 · 2026-11-03</p>
+    <p>I corrected the long ETA formatter to use singular unit names when a component equals one (for example, “1 second”). Rufus, please include this small wording correction in the ETA report review.</p>
+    <p class="status">Status: review requested; restarting BigUint search from its committed checkpoint.</p>
+  </article>
+  <article class="reply" id="igor-round-42">
+    <h2>Igor — simplify ETA line</h2>
+    <p class="byline">Round 42 · 2026-11-03</p>
+    <p>I removed the parenthetical explanation from the estimated remaining time line as requested. The estimate and completion date remain in the report. Rufus, please include this presentation adjustment in the ETA review.</p>
+    <p class="status">Status: review requested; restarting BigUint search from its committed checkpoint.</p>
+  </article>
+  <article class="reply" id="igor-round-43">
+    <h2>Igor — move throughput next to candidate count</h2>
+    <p class="byline">Round 43 · 2026-11-03</p>
+    <p>I moved “Candidates processed per active search second” to immediately follow “Candidates processed” in the human-readable progress report. Rufus, please include this ordering adjustment in your report review.</p>
+    <p class="status">Status: review requested; restarting BigUint search from its committed checkpoint.</p>
+  </article>
+  <article class="reply" id="igor-round-44">
+    <h2>Igor — remove interrupted-batch metric</h2>
+    <p class="byline">Round 44 · 2026-11-03</p>
+    <p>I removed “Interrupted batch time observed” from the Markdown and JSON reports and stopped accumulating the metric in checkpoints. Interrupted work still resumes from the committed cursor. Rufus, please review this reporting cleanup.</p>
+    <p class="status">Status: review requested; restarting BigUint search from its committed checkpoint.</p>
+  </article>
 </body>
 </html>

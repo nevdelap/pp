@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import fcntl
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -40,6 +41,51 @@ def human_duration(seconds: float) -> str:
         if amount:
             parts.append(f"{amount}{suffix}")
     return " ".join(parts) or "0s"
+
+
+def human_long_duration(seconds: int) -> str:
+    remaining = max(0, int(seconds))
+    parts = []
+    for size, label in (
+        (365 * 86400, "years"), (30 * 86400, "months"), (86400, "days"),
+        (3600, "hours"), (60, "minutes"), (1, "seconds"),
+    ):
+        amount, remaining = divmod(remaining, size)
+        unit = label[:-1] if amount == 1 else label
+        parts.append(f"{human_number(amount)} {unit}")
+    return ", ".join(parts)
+
+
+def utc_after_seconds(now: datetime, seconds: int) -> str:
+    """Format a UTC date after an arbitrary duration, including years > 9999."""
+    now = now.astimezone(timezone.utc).replace(microsecond=0)
+    seconds_of_day = now.hour * 3600 + now.minute * 60 + now.second + max(0, seconds)
+    days_to_add, seconds_of_day = divmod(seconds_of_day, 86400)
+    ordinal = now.date().toordinal() + days_to_add
+
+    elapsed_days = ordinal - 1
+    cycles, day_of_cycle = divmod(elapsed_days, 146097)
+    year = cycles * 400 + 1
+    while True:
+        leap = year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
+        days_in_year = 366 if leap else 365
+        if day_of_cycle < days_in_year:
+            break
+        day_of_cycle -= days_in_year
+        year += 1
+
+    month_lengths = [31, 29 if leap else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    month = 1
+    for month_length in month_lengths:
+        if day_of_cycle < month_length:
+            break
+        day_of_cycle -= month_length
+        month += 1
+    day = day_of_cycle + 1
+    hour, remainder = divmod(seconds_of_day, 3600)
+    minute, second = divmod(remainder, 60)
+    year_text = f"{year:04d}" if year <= 9999 else human_number(year)
+    return f"{year_text}-{month:02d}-{day:02d} {hour:02d}:{minute:02d}:{second:02d} UTC"
 
 
 def human_number(value: int | str) -> str:
@@ -290,9 +336,8 @@ class Coordinator:
                 self.recover_unresolved_candidates()
                 if int(self.state.get("unresolved_records", 0)) else []
             )
-        old_batch = self.state.pop("active_batch_elapsed_seconds", None)
-        if old_batch is not None:
-            self.state["interrupted_batch_seconds"] = float(self.state.get("interrupted_batch_seconds", 0)) + float(old_batch)
+        self.state.pop("active_batch_elapsed_seconds", None)
+        self.state.pop("interrupted_batch_seconds", None)
         for field in ("active_batch_start", "active_batch_end", "active_batch_assignments",
                       "active_worker_count", "active_batch_started_utc"):
             self.state.pop(field, None)
@@ -307,6 +352,16 @@ class Coordinator:
         state["percentage_complete"] = f"{100 * done / self.total:.12f}"
         state["elapsed_wall_seconds"] = f"{time.time() - float(state['started_epoch']):.3f}"
         state["active_seconds"] = f"{float(state.get('active_seconds', 0)) + float(state.pop('batch_active_seconds', 0)):.3f}"
+        elapsed_wall_seconds = float(state["elapsed_wall_seconds"])
+        remaining_assignments = max(0, self.total - done)
+        eta_seconds = (
+            math.ceil(remaining_assignments * elapsed_wall_seconds / done)
+            if done > 0 and elapsed_wall_seconds > 0 else None
+        )
+        estimated_completion_utc = (
+            utc_after_seconds(datetime.now(timezone.utc), eta_seconds)
+            if eta_seconds is not None else None
+        )
         palindrome_bits = min(int(state["bits"]), max(self.counts))
         palindrome_excluded = integers_excluded_by_binary_hex_constraints(palindrome_bits, self.counts)
         atomic_json(self.state_path, state)
@@ -323,13 +378,14 @@ class Coordinator:
             "integers_excluded_by_binary_hex_palindrome_constraints_through_current_bit": palindrome_excluded,
             "active_seconds": active_seconds, "started_utc": state["started_utc"],
             "elapsed_wall_seconds": float(state["elapsed_wall_seconds"]),
+            "estimated_remaining_seconds": eta_seconds,
+            "estimated_completion_utc": estimated_completion_utc,
             "average_assignments_per_active_second": done / active_seconds if active_seconds else 0,
             "active_batch_start": state.get("active_batch_start"),
             "active_batch_end_exclusive": state.get("active_batch_end"),
             "active_batch_assignments": state.get("active_batch_assignments"),
             "active_workers": state.get("active_worker_count", 0),
             "active_batch_elapsed_seconds": float(state.get("active_batch_elapsed_seconds", 0)),
-            "interrupted_batch_seconds": float(state.get("interrupted_batch_seconds", 0)),
             "updated_utc": state["updated_utc"], "last_event": event,
             "note": "Incremental BigUint status. Primality records marked unresolved are not proven primes.",
         }
@@ -345,6 +401,7 @@ class Coordinator:
             f"- **Current bit length:** {state['bits']}\n"
             f"- **Next candidate position:** {human_number(state['next_start'])}\n"
             f"- **Candidates processed:** {human_number(state['completed_assignments'])} / {human_number(self.total)}\n"
+            f"- **Candidates processed per active search second:** {done / active_seconds if active_seconds else 0:,.3f}\n"
             f"- **Integers ruled out by binary/hex palindrome constraints through bit length {palindrome_bits}:** {human_number(palindrome_excluded)}\n"
             f"- **Overall workload complete:** {human_percentage(state['percentage_complete'])}%\n"
             f"- **Completed partitions:** {human_number(state['partitions'])}\n{batch}"
@@ -354,8 +411,8 @@ class Coordinator:
             f"- **Unresolved classifications:** {human_number(state['unresolved_records'])}\n"
             f"- **Active worker time:** {human_duration(active_seconds)}\n"
             f"- **Elapsed wall time:** {human_duration(float(state['elapsed_wall_seconds']))}\n"
-            f"- **Interrupted batch time observed:** {human_duration(float(state.get('interrupted_batch_seconds', 0)))}\n"
-            f"- **Candidates processed per active search second:** {done / active_seconds if active_seconds else 0:,.3f}\n"
+            f"- **Estimated remaining time:** {human_long_duration(eta_seconds) if eta_seconds is not None else 'not available'}\n"
+            f"- **Estimated completion date:** {estimated_completion_utc or 'not available'}\n"
             "Each candidate position maps to one integer that is palindromic in binary and hexadecimal. "
             "Decimal palindromicity and then primality are checked afterward.\n"
         )
@@ -439,11 +496,9 @@ class Coordinator:
             raise RuntimeError("recovered unresolved candidate list does not match the checkpoint count")
         return recovered
 
-    def save_stopped_batch(self, batch_started: float) -> None:
-        elapsed = time.monotonic() - batch_started
+    def save_stopped_batch(self) -> None:
         self.state["status"] = "stopped" if (self.root / "STOP").exists() else "interrupted"
         self.state["active_worker_count"] = 0
-        self.state["interrupted_batch_seconds"] = float(self.state.get("interrupted_batch_seconds", 0)) + elapsed
         for field in ("active_batch_start", "active_batch_end", "active_batch_assignments",
                       "active_batch_started_utc", "active_batch_elapsed_seconds"):
             self.state.pop(field, None)
@@ -490,7 +545,7 @@ class Coordinator:
                         proc.kill()
                         proc.wait()
                 pending.clear()
-                self.save_stopped_batch(batch_started)
+                self.save_stopped_batch()
                 return
             now = time.monotonic()
             if now - last_snapshot >= 30:
@@ -502,7 +557,7 @@ class Coordinator:
                 time.sleep(0.25)
         elapsed = time.monotonic() - batch_started
         if STOP_REQUESTED:
-            self.save_stopped_batch(batch_started)
+            self.save_stopped_batch()
             return
         if failed:
             raise RuntimeError("BigInt partition batch failed; supervisor will retry from checkpoint")
