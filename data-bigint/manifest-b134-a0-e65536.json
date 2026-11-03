@@ -1,0 +1,1 @@
+{"batch_end_exclusive":"65536","completion_utc":"2026-11-03T10:10:27Z","ranges":[{"assignment_start":"0","decimal_pass":0,"generated":"65536","status":"completed","assignment_end_exclusive":"65536","file":"/workspace/data-bigint/big-b134-a0-e65536.jsonl"}],"status":"completed","batch_start":"0","bits":134}

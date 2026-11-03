@@ -15,5 +15,11 @@ __pycache__/
 /.runtime/
 
 jj-build-path-check/
+# Keep restart-critical BigUint state in jj: the durable checkpoint,
+# completed partition records/manifests, and the 2–128 comparison result.
 /data-bigint/*
+!/data-bigint/checkpoint.json
+!/data-bigint/big-b*.jsonl
+!/data-bigint/manifest-b*.json
+!/data-bigint/comparison-2-128.json
 !/data-bigint/final-report.md

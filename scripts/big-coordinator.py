@@ -56,8 +56,8 @@ def human_long_duration(seconds: int) -> str:
     return ", ".join(parts)
 
 
-def utc_after_seconds(now: datetime, seconds: int) -> str:
-    """Format a UTC date after an arbitrary duration, including years > 9999."""
+def utc_after_seconds(now: datetime, seconds: int) -> tuple[str, str]:
+    """Return machine and human UTC dates, supporting years beyond 9999."""
     now = now.astimezone(timezone.utc).replace(microsecond=0)
     seconds_of_day = now.hour * 3600 + now.minute * 60 + now.second + max(0, seconds)
     days_to_add, seconds_of_day = divmod(seconds_of_day, 86400)
@@ -84,8 +84,13 @@ def utc_after_seconds(now: datetime, seconds: int) -> str:
     day = day_of_cycle + 1
     hour, remainder = divmod(seconds_of_day, 3600)
     minute, second = divmod(remainder, 60)
-    year_text = f"{year:04d}" if year <= 9999 else human_number(year)
-    return f"{year_text}-{month:02d}-{day:02d} {hour:02d}:{minute:02d}:{second:02d} UTC"
+    date_and_time = f"{month:02d}-{day:02d}T{hour:02d}:{minute:02d}:{second:02d}"
+    iso_year = f"{year:04d}" if year <= 9999 else f"+{year:06d}"
+    human_year = f"{year:04d}" if year <= 9999 else human_number(year)
+    return (
+        f"{iso_year}-{date_and_time}Z",
+        f"{human_year}-{month:02d}-{day:02d} {hour:02d}:{minute:02d}:{second:02d} UTC",
+    )
 
 
 def human_number(value: int | str) -> str:
@@ -358,10 +363,12 @@ class Coordinator:
             math.ceil(remaining_assignments * elapsed_wall_seconds / done)
             if done > 0 and elapsed_wall_seconds > 0 else None
         )
-        estimated_completion_utc = (
-            utc_after_seconds(datetime.now(timezone.utc), eta_seconds)
-            if eta_seconds is not None else None
-        )
+        if eta_seconds is not None:
+            estimated_completion_utc, estimated_completion_human = utc_after_seconds(
+                datetime.now(timezone.utc), eta_seconds
+            )
+        else:
+            estimated_completion_utc = estimated_completion_human = None
         palindrome_bits = min(int(state["bits"]), max(self.counts))
         palindrome_excluded = integers_excluded_by_binary_hex_constraints(palindrome_bits, self.counts)
         atomic_json(self.state_path, state)
@@ -412,9 +419,7 @@ class Coordinator:
             f"- **Active worker time:** {human_duration(active_seconds)}\n"
             f"- **Elapsed wall time:** {human_duration(float(state['elapsed_wall_seconds']))}\n"
             f"- **Estimated remaining time:** {human_long_duration(eta_seconds) if eta_seconds is not None else 'not available'}\n"
-            f"- **Estimated completion date:** {estimated_completion_utc or 'not available'}\n"
-            "Each candidate position maps to one integer that is palindromic in binary and hexadecimal. "
-            "Decimal palindromicity and then primality are checked afterward.\n"
+            f"- **Estimated completion date:** {estimated_completion_human or 'not available'}\n"
         )
         if state.get("unresolved_candidates"):
             human += "\n## Unresolved candidates\n"

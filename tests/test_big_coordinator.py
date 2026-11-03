@@ -4,6 +4,7 @@ from pathlib import Path
 import tempfile
 import time
 import unittest
+from datetime import datetime, timezone
 from unittest.mock import patch
 
 
@@ -40,6 +41,13 @@ class CoordinatorValidationTests(unittest.TestCase):
     def test_duration_is_human_readable(self):
         self.assertEqual(coordinator.human_duration(93784), "1d 2h 3m 4s")
         self.assertEqual(coordinator.human_duration(0), "0s")
+
+    def test_extended_utc_estimate_uses_machine_and_human_formats(self):
+        machine, human = coordinator.utc_after_seconds(
+            datetime(9999, 12, 31, 23, 59, 59, tzinfo=timezone.utc), 1
+        )
+        self.assertEqual(machine, "+010000-01-01T00:00:00Z")
+        self.assertEqual(human, "10,000-01-01 00:00:00 UTC")
 
     def test_large_human_report_numbers_use_commas(self):
         self.assertEqual(coordinator.human_number("49191317547072006819"), "49,191,317,547,072,006,819")

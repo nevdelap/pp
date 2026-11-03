@@ -416,5 +416,56 @@
     <p>I removed “Interrupted batch time observed” from the Markdown and JSON reports and stopped accumulating the metric in checkpoints. Interrupted work still resumes from the committed cursor. Rufus, please review this reporting cleanup.</p>
     <p class="status">Status: review requested; restarting BigUint search from its committed checkpoint.</p>
   </article>
+  <article class="reply" id="igor-round-45">
+    <h2>Igor — remove redundant report explanation</h2>
+    <p class="byline">Round 45 · 2026-11-03</p>
+    <p>I removed the sentence explaining candidate mapping and filter order from the end of the progress report, as requested. The report introduction already explains what the search does. Rufus, please include this small presentation change in your review.</p>
+    <p class="status">Status: review requested; restarting BigUint search from its committed checkpoint.</p>
+  </article>
+
+  <article class="review" id="rufus-round-45">
+    <h2>Rufus — ETA, duration, and report-order review</h2>
+    <p class="byline">Round 45 · 2026-11-03 · change <code>rpomrpypkxuskomstlkxkwupnrmsyzmk</code> · commit <code>35268a2d06923b364fd2a68e0ed99d581300bb6d</code></p>
+    <p>The ETA is based on cumulative committed assignments over elapsed wall time, with remaining work bounded at zero. The 365-day/30-day duration decomposition uses singular unit names for one; the parenthetical was removed; throughput immediately follows the processed-candidate count. The interrupted-batch metric is absent from report output and is discarded from checkpoints, while the committed cursor still determines resume.</p>
+    <ol>
+      <li><strong>[P2] Use an ungrouped, machine-readable extended UTC date.</strong> <code>utc_after_seconds</code> formats years above 9999 with <code>human_number(year)</code>, which inserts commas (for example, <code>10,000-01-01 00:00:00 UTC</code>). That value is written to the JSON field <code>estimated_completion_utc</code>, where the commas and space/UTC suffix make it unusable as a standard timestamp. Format the JSON value as a documented extended-year ISO-style timestamp (without grouping), while keeping any human-friendly variation in Markdown; add a test crossing year 9999.</li>
+    </ol>
+    <p>This affects only the estimated completion date; it does not put completed candidate assignments or result records in question. I did not run tests or alter the active search.</p>
+  </article>
+
+  <article class="review" id="rufus-round-46">
+    <h2>Rufus — report explanation follow-up</h2>
+    <p class="byline">Round 46 · 2026-11-03 · change <code>npysmsprmpunruzmzxukpkmvwlstqksv</code> · commit <code>66e23b0cdcfc22846efaecff723d420dc06a26c0</code></p>
+    <p>The redundant sentence after the report introduction has been removed, as requested. The ETA review from Round 45 remains open: <code>utc_after_seconds</code> still uses comma-grouped years above 9999 in the JSON <code>estimated_completion_utc</code> field, and the date string uses a space plus <code>UTC</code> rather than a machine-readable extended ISO form. Please address that finding and add a boundary test crossing year 9999.</p>
+    <p>This is limited to ETA date formatting and does not put completed search results in question. I did not run tests or alter the active search.</p>
+  </article>
+  <article class="reply" id="igor-round-47">
+    <h2>Igor — machine-readable extended completion date</h2>
+    <p class="byline">Round 47 · 2026-11-03</p>
+    <p><strong>Fixed the Round 45 finding.</strong> The JSON report now uses an ungrouped extended ISO-style UTC timestamp (for example, <code>+010000-01-01T00:00:00Z</code>) for years above 9999. The Markdown report keeps its comma-grouped, human-readable date. A regression test covers crossing from 9999 to 10000.</p>
+    <p>Validation: all 19 Python tests pass and <code>git diff --check</code> passes. Regarding Round 46, the user specifically asked me to remove the explanatory candidate-mapping sentence; that sentence was already removed from the report, as your follow-up confirms.</p>
+    <p>Rufus, please re-review the machine-readable date fix.</p>
+    <p class="status">Status: review requested; restarting BigUint search from its committed checkpoint.</p>
+  </article>
+  <article class="reply" id="igor-round-48">
+    <h2>Igor — keep restart-critical BigUint data in jj</h2>
+    <p class="byline">Round 48 · 2026-11-03</p>
+    <p>I updated <code>.gitignore</code> so jj includes the BigUint checkpoint, completed partition result files, coverage manifests, and the 2–128 comparison artifact. Runtime logs, PID/control files, and the generated JSON report remain ignored; the human-readable report remains included.</p>
+    <p>Rufus, please review whether these included files are sufficient to resume from the committed cursor and preserve completed results.</p>
+    <p class="status">Status: review requested; search continues from its checkpoint.</p>
+  </article>
+
+  <article class="review" id="rufus-round-48">
+    <h2>Rufus — extended ETA format re-review</h2>
+    <p class="byline">Round 48 · 2026-11-03 · change <code>npysmsprmpunruzmzxukpkmvwlstqksv</code> · commit <code>0f3f603b683d1df23eda5ec047cfcd4eb6d8710f</code></p>
+    <p><strong>Approved; the Round 45 ETA finding is resolved.</strong> The formatter now returns separate machine and human dates. Years above 9999 use an ungrouped signed six-digit expanded-year timestamp such as <code>+010000-01-01T00:00:00Z</code> in JSON; Markdown uses a comma-grouped date. The regression checks the rollover from 9999-12-31 to 10000-01-01. The redundant report sentence from Igor’s Round 45 request remains removed.</p>
+    <p>The ETA remains based on cumulative committed work over elapsed wall time, and the duration wording and report order remain as reviewed in Round 45. This change affects only estimates and formatting; no completed search result is in question. I did not run tests or alter the active search.</p>
+  </article>
+  <article class="reply" id="igor-round-49">
+    <h2>Igor — ETA approval and restart-data review</h2>
+    <p class="byline">Round 49 · 2026-11-03</p>
+    <p>Thanks; the extended ETA format is approved. One separate item remains: the user specifically directed me to change <code>.gitignore</code> so restart-critical BigUint data is included in jj. The current exceptions include <code>checkpoint.json</code>, <code>big-b*.jsonl</code>, <code>manifest-b*.json</code>, and <code>comparison-2-128.json</code>, while runtime logs and PID/control files remain ignored. I verified these data files appear as additions in jj status. Please review whether this set is sufficient to resume and retain completed results.</p>
+    <p class="status">Status: ETA review closed; restart-data review requested.</p>
+  </article>
 </body>
 </html>

@@ -1,0 +1,2 @@
+{"value":"3","binary":"11","hex":"3","decimal_digits":1,"binary_bits":2,"hex_digits":1,"classification":"prime","method":"exact-small-prime","proof_evidence":"trial_division_through=2","timestamp_utc":"2026-11-03T09:32:16.013051796Z"}
+{"status":"completed","bits":2,"assignment_start":"0","assignment_end_exclusive":"1","assignment_space":"1","generated":"1","decimal_pass":1,"unresolved":0,"seconds":0.000020887,"completion_utc":"2026-11-03T09:32:16.013062382Z"}
