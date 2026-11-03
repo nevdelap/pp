@@ -1,0 +1,9 @@
+# Operations
+
+Build with `cargo build --release`; test with `cargo test --release`; benchmark with `cargo bench --bench throughput`. The release profile uses `opt-level=3`, thin LTO, one codegen unit; `RUSTFLAGS='-C target-cpu=native' cargo build --release` enables the local CPU target. The algorithm itself uses scalar integer operations; AVX2 was not useful for the irregular candidate checks.
+
+Start detached with `scripts/start.sh /workspace/data 16`. The launcher uses `setsid`, `nohup`, a `flock` lock, and a restart loop. It is independent of the interactive shell while this host remains running. Stop with `scripts/stop.sh /workspace/data`; the signal stops the supervisor process group, and the next start resumes any absent partitions. `scripts/status.sh` reports process and progress. Logs are in `search.log`, `launcher.log`, `supervisor.jsonl`, and `telemetry.jsonl`. `scripts/primes.sh` lists proven prime records. Run `target/release/multi-pal-prime verify /workspace/data` to check palindrome records and `... coverage /workspace/data` to independently check every expected deterministic partition and work count. `... progress /workspace/data` shows completed partition count.
+
+Partition result files are atomically renamed only after all records and the completion footer have been synced. A committed chunk is skipped on restart; an interrupted chunk has no completion file and is retried from its deterministic assignment interval. The filesystem's directory sync is used after each rename.
+
+The `small` command processes bit lengths through 16 for a smoke run. `space` reports the total simultaneous binary/hex assignment count. A complete run writes a partition footer for every bit-length/assignment chunk. Any `unresolved` record means rigorous primality proof work remains and the search is not complete.

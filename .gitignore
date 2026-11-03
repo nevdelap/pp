@@ -1,0 +1,15 @@
+# Search run state and per-partition output are kept locally; the compressed
+# verification archive and final summaries are versionable.
+/data/*
+!/data/final-report.json
+!/data/final-report.md
+!/data/primes.txt
+!/data/coverage-artifacts.tar.gz
+/data-small/
+/data-smoke/
+/data-smoke2/
+/data-smoke3/
+/target/
+
+jj-build-path-check/
+/data-bigint/
